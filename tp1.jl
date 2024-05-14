@@ -392,13 +392,13 @@ begin
 	    a, b, c = ajuste_alg(data)
 
 		# Definir la ruta de guardado del archivo
-	    ruta_guardado = "plots_algebraicos_ygeom/plot_algebraicos_ygeom$i.png"
+	    ruta_guardado = "plots_algebraicos_ygeom/plot_algebraicos_ygeometricos$i.png"
 	    
 	    # Graficar el ajuste algebraico junto a los puntos del conjunto de datos
 	    plot_algebraico(a, b, c, data)
 
 		# Graficar el ajuste geometrico junto a los puntos del conjunto de datos
-		a1, b1, radio = ajuste_geom(data, (a,b,c+a*a+b*b))
+		a1, b1, radio = ajuste_geom(data, (a,b,sqrt(c + a*a + b*b)))
 
     	
 		# Calcular el centro y el radio del círculo ajustado
