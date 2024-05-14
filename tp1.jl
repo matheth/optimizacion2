@@ -398,7 +398,7 @@ begin
 	    plot_algebraico(a, b, c, data)
 
 		# Graficar el ajuste geometrico junto a los puntos del conjunto de datos
-		a1, b1, radio = ajuste_geom(data, (a,b,c))
+		a1, b1, radio = ajuste_geom(data, (a,b,c+a*a+b*b))
 
     	
 		# Calcular el centro y el radio del círculo ajustado
