@@ -51,23 +51,17 @@ md"""
 	Graficar las primeras 10 imagenes del dígito 0 del conjunto de entrenamiento. Recuerde que el vector `y_train` contiene los digitos para cada matriz de entrenamiento. Para realizar esto puede ser útil el comando `findall`.  
 """
 
-# ╔═╡ 16b02014-0223-48bc-88d0-fd9b12ca4a6e
-begin
-	T = Float32
-	X_train, y_train = MLDatasets.MNIST(T, :train)[:]
-	X_test, y_test = MLDatasets.MNIST(T, :test)[:]
-end
-
-# ╔═╡ 6dc9f1b8-41d9-47ac-9b64-59d4468b7c87
-indices = findall(iszero, y_train)
-
 # ╔═╡ 1f4d1f84-6ba2-4a1f-a1f4-fe35fcb9c65e
 begin
-	count = 1
-	while count <= 10
-		save("ejercicio1/$count.png", colorview(Gray, ones(28, 28) - X_train[:,:,indices[count]]))
-		count += 1
+	# Encontrar los índices de las imágenes del dígito 0
+	indices = findall(y_prueba .== 0)
+	
+	# Graficar las primeras 10 imágenes del dígito 0
+	plot(layout=(1, 10), legend=false)
+	for i in 1:10
+	    plot!(Gray.(X_prueba[:,:,indices[i]]), subplot=i, axis=nothing)
 	end
+	plot!()
 end
 
 # ╔═╡ 7fb568c1-e4bd-41da-8924-30b13d5011b7
@@ -79,20 +73,20 @@ md"""
 """
 
 # ╔═╡ 1aa88a80-92eb-4a5c-88d0-88f4207cd0d0
-function load_data(onehot=false)
+function load_data(;onehot=false)
 	T = Float32
 	X_train, y_train = MLDatasets.MNIST(T, :train)[:]
 	X_test, y_test = MLDatasets.MNIST(T, :test)[:]
 
 	if onehot
-		labels = 1:9
+		labels = 0:9
 		return X_train, Flux.onehotbatch(y_train, labels), X_test, Flux.onehotbatch(y_test, labels)
 	end
 	return X_train, y_train, X_test, y_test
 end
 
 # ╔═╡ f00633d3-162a-499b-92b5-23bbc303f6fd
-
+X_train, y_train, X_test, y_test = load_data(onehot=true)
 
 # ╔═╡ 4fa39e63-cb80-4125-ad7e-80ef1f7cba4f
 md"""
@@ -128,6 +122,7 @@ md"""
 begin
 	internal_number_of_variables = 500
 	model_prueba = Chain(
+		x -> Flux.unsqueeze(x, dims=3),
 		Flux.flatten,
 		Dense(28*28, internal_number_of_variables, relu),
 		Dense(internal_number_of_variables, 10, sigmoid),
@@ -154,31 +149,24 @@ md"""
 """
 
 # ╔═╡ 33dca609-3238-430f-8dae-0aa6199b01e7
-model_prueba(Flux.unsqueeze(X_train[:,:,1], dims=3))
+begin
+	indice = 1
+	# Verdadero dígito
+	true_digit = Flux.onecold(y_train[:,indice]) - 1
+	
+	# Predicción del modelo sin entrenar
+	predicted_digit = Flux.onecold(model_prueba(X_train[:,:,indice]))[1] - 1
+	
+	println("True digit: $true_digit")
+	println("Predicted digit: $predicted_digit")
+	Gray.(ones(28,28)-X_train[:,:,indice])
+end
 
-# ╔═╡ 0ced6b32-81f6-4c88-a45f-a63b95f8517a
-argmax(model_prueba(Flux.unsqueeze(X_train[:,:,1], dims=3)))[1]-1
+# ╔═╡ b0f2c5f9-7303-4c81-a244-fe54f00f4d70
+# ╠═╡ skip_as_script = true
+#=╠═╡
 
-# ╔═╡ 62db68c0-b02b-4684-bc89-5425ef8b0b45
-y_train[24]
-
-# ╔═╡ b9c2bbef-22f9-4e1f-a85c-33119b850201
-Gray.(ones(28,28)-X_prueba[:,:,24])
-
-# ╔═╡ b6ffb9c8-3c19-4040-8528-d7a57fd6ec67
-argmax(model_prueba(Flux.unsqueeze(X_train[:,:,24], dims=3)))[1]-1
-
-# ╔═╡ ebc5b53b-5660-43df-844a-1fb9703f780c
-length(X_test)
-
-# ╔═╡ b8f05289-a967-430c-a20e-092bbba0d737
-size(X_test, 3)
-
-# ╔═╡ bbd513bb-b30b-4a9a-91a1-074b96d75f6b
-X_test[:, :, 10000-1]
-
-# ╔═╡ 58027cbd-c072-4f91-b013-8817e10e6a71
-y_train[:, 2]
+  ╠═╡ =#
 
 # ╔═╡ 3fc9aacf-7475-4f67-b3d1-090f1524271b
 md"""
@@ -211,21 +199,27 @@ md"""
 """
 
 # ╔═╡ 266a746d-0ec4-458c-ae3b-a861169e5200
-function accuracy(modelo, X_test, y_test)
-	correct_values = 0
-	for index in 1:size(X_test, 3)
-		predicted_value = argmax(modelo(Flux.unsqueeze(X_test[:,:,index], dims=3)))[1] - 1
-		if predicted_value == y_test[index]
-			correct_values += 1
-		end 
-	end
-	return correct_values/length(X_test)
-end
-
-# ╔═╡ f896809f-80fe-4269-8745-3913fdc5ef2c
 begin
-	calculated_accuracy = accuracy(model_prueba, X_test, y_test)
-	println("The accuracy is $calculated_accuracy")
+	function accuracy(model, data)
+	    correct_values = 0
+	    total_values = 0
+	
+	    for (X, y) in data
+	        for i in 1:size(X, 3)
+	            predicted_value = argmax(model(X[:,:,i]))[1] - 1
+	            if predicted_value == Flux.onecold(y[:,i]) - 1
+	                correct_values += 1
+	            end
+	            total_values += 1
+	        end
+	    end
+	
+	    return correct_values / total_values
+	end
+	
+	# Uso de la función
+	acc = accuracy(model_prueba, data1)
+	println("Accuracy: $acc")
 end
 
 # ╔═╡ a8f7204f-eb72-4dba-8e99-783ec67bd30f
@@ -238,45 +232,28 @@ md"""
 """
 
 # ╔═╡ 35150b4a-3f1e-4af2-bdd9-2640894a419c
-# Función para entrenar el modelo
-function train_model!(model, loss_fn, data, optimizer, epochs, onehot=false)
-    data1, X_test, y_test = data
-    train_loss_history = []
-    test_accuracy_history = []
-
-    for epoch in 1:epochs
-        # Entrenamiento del modelo
-		Flux.train!(loss_fn, Flux.params(model), data1, optimizer)
-        
-        # Calcular y guardar la pérdida del conjunto de entrenamiento
-        epoch_loss = mean([loss_fn(model(Flux.unsqueeze(X_train[:,:,i], dims=3))[1]-1, y_train[i]) for i in 1:size(X_train, 3)])
-        push!(train_loss_history, epoch_loss)
-
-        # Calcular y guardar la precisión del conjunto de testeo
-        epoch_accuracy = accuracy(model, X_test, y_test)
-        push!(test_accuracy_history, epoch_accuracy)
-
-        # Imprimir la pérdida y la precisión para cada epoch
-        println("Epoch: $epoch, Training Loss: $epoch_loss, Test Accuracy: $epoch_accuracy")
-    end
-
-    return train_loss_history, test_accuracy_history
-end
-
-# ╔═╡ 8e48ce52-fc84-43ab-b5e1-4b4fb4127c9d
 begin
-	# Definir la función de pérdida y el optimizador
-	loss_fn = Flux.Losses.crossentropy
-	optimizer = Flux.ADAM()
+	# Función de pérdida personalizada que acepta la salida del modelo como está
+	function custom_loss_fn(model, (X, y))
+	    X = permutedims(X, [3, 1, 2])  # Reorganizar las dimensiones de X
+	    ŷ = model(X)
+	    return Flux.Losses.crossentropy(ŷ, y)
+	end
 	
-	# Entrenar el modelo
+	# Función para entrenar el modelo
+	function train_model!(model, data, optimizer, epochs)
+	    for epoch in 1:epochs
+	        Flux.train!(custom_loss_fn(model, data), params(model), data, optimizer)
+	        println("Epoch: $epoch, Accuracy: $(accuracy(model, data)), Loss: $(custom_loss_fn(model, data))")
+	    end
+	end
+	
+	# Uso de la función
+	optimizer = Flux.ADAM()
 	epochs = 10
-	train_loss_history, test_accuracy_history = train_model!(model_prueba, loss_fn, (data1, X_test, y_test), optimizer, epochs)
+	train_model!(model_prueba, data1, optimizer, epochs)
 	
 end
-
-# ╔═╡ 0b5f5fb9-35f0-4191-88e5-74294cac1bef
-
 
 # ╔═╡ 2fff20de-4831-4d34-95de-27f3b4d8ae51
 md"""
@@ -2851,8 +2828,6 @@ version = "1.4.1+1"
 # ╟─cbc7cf07-834a-4ee8-9103-9edf0c63f50a
 # ╠═2c554f3d-ccdd-4d57-a7e0-52d9be974294
 # ╟─be5c6489-b410-473b-a875-7e25a0313175
-# ╠═16b02014-0223-48bc-88d0-fd9b12ca4a6e
-# ╠═6dc9f1b8-41d9-47ac-9b64-59d4468b7c87
 # ╠═1f4d1f84-6ba2-4a1f-a1f4-fe35fcb9c65e
 # ╟─7fb568c1-e4bd-41da-8924-30b13d5011b7
 # ╠═1aa88a80-92eb-4a5c-88d0-88f4207cd0d0
@@ -2866,14 +2841,7 @@ version = "1.4.1+1"
 # ╟─d88b258c-cfcd-416b-b15a-b3f864b04030
 # ╟─eaeeb678-e690-4de1-8a65-84bff36f24ae
 # ╠═33dca609-3238-430f-8dae-0aa6199b01e7
-# ╠═0ced6b32-81f6-4c88-a45f-a63b95f8517a
-# ╠═62db68c0-b02b-4684-bc89-5425ef8b0b45
-# ╠═b9c2bbef-22f9-4e1f-a85c-33119b850201
-# ╠═b6ffb9c8-3c19-4040-8528-d7a57fd6ec67
-# ╠═ebc5b53b-5660-43df-844a-1fb9703f780c
-# ╠═b8f05289-a967-430c-a20e-092bbba0d737
-# ╠═bbd513bb-b30b-4a9a-91a1-074b96d75f6b
-# ╠═58027cbd-c072-4f91-b013-8817e10e6a71
+# ╠═b0f2c5f9-7303-4c81-a244-fe54f00f4d70
 # ╟─3fc9aacf-7475-4f67-b3d1-090f1524271b
 # ╟─3bdf1d99-df8c-4b3c-b12b-aeefabad2e4f
 # ╟─5ec00665-3fe3-4a82-a5f2-45fe86fa0d15
@@ -2881,11 +2849,8 @@ version = "1.4.1+1"
 # ╠═7853b8f8-5302-4914-a7c8-ef160669a6fe
 # ╟─3f90f311-2892-4a51-a47c-e9b3bc02573d
 # ╠═266a746d-0ec4-458c-ae3b-a861169e5200
-# ╠═f896809f-80fe-4269-8745-3913fdc5ef2c
 # ╟─a8f7204f-eb72-4dba-8e99-783ec67bd30f
 # ╠═35150b4a-3f1e-4af2-bdd9-2640894a419c
-# ╠═8e48ce52-fc84-43ab-b5e1-4b4fb4127c9d
-# ╠═0b5f5fb9-35f0-4191-88e5-74294cac1bef
 # ╟─2fff20de-4831-4d34-95de-27f3b4d8ae51
 # ╠═9098ed3e-62bb-4fee-923c-a4969d489be3
 # ╟─ba9a94e8-40ef-42ad-a941-dce9ad1d2435
