@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.40
+# v0.19.42
 
 using Markdown
 using InteractiveUtils
@@ -62,7 +62,7 @@ begin
 	    plot!(Gray.(X_prueba[:,:,indices[i]]), subplot=i, axis=nothing)
 	end
 	plot!()
-end
+end 
 
 # ╔═╡ 7fb568c1-e4bd-41da-8924-30b13d5011b7
 md"""
@@ -109,9 +109,6 @@ md"""
 Para que no haya diferencias en lo que cada uno implemente, fijaremos la semilla:
 """
 
-# ╔═╡ d1337cc6-ac71-4234-88db-fe01f4686807
-Random.seed!(1234)
-
 # ╔═╡ 4b4b1742-d7e7-4538-b420-9ebd63e8b463
 md"""
 !!! note "Ejercicio 3"
@@ -121,11 +118,12 @@ md"""
 # ╔═╡ 3545dc45-9902-4e51-9b4a-772c7f667e0e
 begin
 	internal_number_of_variables = 500
+	
 	model_prueba = Chain(
-		x -> Flux.unsqueeze(x, dims=3),
+		# x -> Flux.unsqueeze(x, dims=3),
 		Flux.flatten,
-		Dense(28*28, internal_number_of_variables, relu),
-		Dense(internal_number_of_variables, 10, sigmoid),
+		Dense(28*28, 500, relu),
+		Dense(500, 10, sigmoid),
 		softmax
 	)
 end
@@ -155,18 +153,12 @@ begin
 	true_digit = Flux.onecold(y_train[:,indice]) - 1
 	
 	# Predicción del modelo sin entrenar
-	predicted_digit = Flux.onecold(model_prueba(X_train[:,:,indice]))[1] - 1
+	predicted_digit = Flux.onecold(model_prueba(Flux.unsqueeze(X_train[:,:,indice], dims=3)))[1] - 1
 	
 	println("True digit: $true_digit")
 	println("Predicted digit: $predicted_digit")
 	Gray.(ones(28,28)-X_train[:,:,indice])
 end
-
-# ╔═╡ b0f2c5f9-7303-4c81-a244-fe54f00f4d70
-# ╠═╡ skip_as_script = true
-#=╠═╡
-
-  ╠═╡ =#
 
 # ╔═╡ 3fc9aacf-7475-4f67-b3d1-090f1524271b
 md"""
@@ -206,7 +198,7 @@ begin
 	
 	    for (X, y) in data
 	        for i in 1:size(X, 3)
-	            predicted_value = argmax(model(X[:,:,i]))[1] - 1
+	            predicted_value = argmax(model(Flux.unsqueeze(X[:,:,i], dims=3)))[1] - 1
 	            if predicted_value == Flux.onecold(y[:,i]) - 1
 	                correct_values += 1
 	            end
@@ -233,26 +225,39 @@ md"""
 
 # ╔═╡ 35150b4a-3f1e-4af2-bdd9-2640894a419c
 begin
-	# Función de pérdida personalizada que acepta la salida del modelo como está
-	function custom_loss_fn(model, (X, y))
-	    X = permutedims(X, [3, 1, 2])  # Reorganizar las dimensiones de X
-	    ŷ = model(X)
-	    return Flux.Losses.crossentropy(ŷ, y)
-	end
-	
 	# Función para entrenar el modelo
-	function train_model!(model, data, optimizer, epochs)
+	function train_model!(X_train, y_train, X_test, y_test, data, optimizer, epochs)
+		precision = []
+		perdida = []
+		perdida_test = []
+
+		
+
+		model = Chain(
+			# x -> Flux.unsqueeze(x, dims=3),
+			Flux.flatten,
+			Dense(28*28, 500, relu),
+			Dense(500, 10, sigmoid),
+			softmax
+		)
+
+		loss(x, y) = Flux.crossentropy(model(x), y)
+
+		
+		i = 1
 	    for epoch in 1:epochs
-	        Flux.train!(custom_loss_fn(model, data), params(model), data, optimizer)
-	        println("Epoch: $epoch, Accuracy: $(accuracy(model, data)), Loss: $(custom_loss_fn(model, data))")
+			Flux.train!(loss, Flux.params(model), data, optimizer)
+			
+			append!(precision, accuracy(model, data))
+			append!(perdida, loss(Flux.unsqueeze(X_train[:,:,i], dims=3), y_train[:,i]))
+	        
+			append!(perdida_test, loss(Flux.unsqueeze(X_test[:,:,i], dims=3), y_test[:,i]))
+	        
+			println("Epoch: $epoch, Accuracy: $(accuracy(model, data)), Loss: $(loss(Flux.unsqueeze(X_train[:,:,i], dims=3), y_train[:,i]))")
+			i += 1
 	    end
+		return precision, perdida, perdida_test
 	end
-	
-	# Uso de la función
-	optimizer = Flux.ADAM()
-	epochs = 10
-	train_model!(model_prueba, data1, optimizer, epochs)
-	
 end
 
 # ╔═╡ 2fff20de-4831-4d34-95de-27f3b4d8ae51
@@ -267,7 +272,21 @@ md"""
 """
 
 # ╔═╡ 9098ed3e-62bb-4fee-923c-a4969d489be3
-#completar
+begin
+	epochs = 5
+	precision_descent, perdida_descent, perdida_descent_test = train_model!(X_train, y_train, X_test, y_test, data1, Flux.Descent(0.1), epochs)
+		
+end
+
+# ╔═╡ 243c4c32-c004-4936-adb1-15369b568ea2
+begin
+	precision_adam, perdida_adam, perdida_adam_test = train_model!(X_train, y_train, X_test, y_test, data1, Flux.ADAM(), epochs)
+end
+
+# ╔═╡ f172894f-6ea6-455b-b70e-181bfc82c436
+begin
+	precision_momentum, perdida_momentum, perdida_momentum_test = train_model!(X_train, y_train, X_test, y_test, data1, Flux.Momentum(), epochs)
+end
 
 # ╔═╡ ba9a94e8-40ef-42ad-a941-dce9ad1d2435
 md"""
@@ -276,7 +295,24 @@ md"""
 """
 
 # ╔═╡ 8210e8d7-5e9e-4163-bd5a-d3bbf7f03ab0
-#completar
+begin
+	plot(1:epochs, precision_descent, title="Precision", label="Precision", linewidth=3)
+	plot!(1:epochs, precision_adam, title="Precision", label="Precision", linewidth=3)
+	plot!(1:epochs, precision_momentum, title="Precision", label="Precision", linewidth=3)
+end
+
+
+# ╔═╡ 053b5f9b-6649-4105-a229-d49686e4beae
+begin
+	plot(1:epochs, perdida_descent, title="Perdida", label="Perdida", linewidth=3)
+	plot!(1:epochs, perdida_adam, title="Perdida", label="Perdida", linewidth=3)
+	plot!(1:epochs, perdida_momentum, title="Perdida", label="Perdida", linewidth=3)
+	
+end
+
+# ╔═╡ 6fc8b557-509f-42f2-91b8-78b7bb4e85ed
+begin
+end
 
 # ╔═╡ badeffab-386a-4a3b-8c5d-8588ec26df80
 md"""
@@ -285,7 +321,15 @@ md"""
 """
 
 # ╔═╡ 8e1991dd-7ee8-4cf8-8370-bf4cb815a0d5
-#completar
+plot(1:epochs, perdida_descent, title="Perdidas", label="Perdida Descent", linewidth=3)
+plot!(1:epochs, perdida_descent_test, title="Perdidas", label="Perdida Descent test", linewidth=3)
+plot!(1:epochs, perdida_adam, title="Perdidas", label="Perdida Adam", linewidth=3)
+plot!(1:epochs, perdida_adam_test, title="Perdidas", label="Perdida Adam test", linewidth=3)
+plot!(1:epochs, perdida_momentum, title="Perdidas", label="Perdida Momentum", linewidth=3)
+plot!(1:epochs, perdida_momentum_test, title="Perdidas", label="Perdida Momentum test", linewidth=3)
+
+
+
 
 # ╔═╡ 4a3dc8cd-9d21-4a8a-8777-cb043e3ce22f
 md"""
@@ -320,7 +364,24 @@ md"""
 """
 
 # ╔═╡ 0ffc22b3-9dcd-496a-a694-1ef3675396f4
-#completar
+modelo_convolucional = Chain(
+    Conv((5,5),1 => 6, relu),
+    MaxPool((2,2)),
+    Conv((5,5),6 => 16, relu),
+    MaxPool((2,2)),
+    Flux.flatten,
+    Dense(256=>120,relu),
+    Dense(120=>84, relu),
+    Dense(84=>10, sigmoid),
+    softmax
+)
+
+# ╔═╡ 1055c483-b17a-4b9b-b1d1-68e43ac0889d
+Random.seed!(1234)
+T = Float32
+X_train, y_train = MLDatasets.MNIST(T, :train)[:]
+X_test, y_test = MLDatasets.MNIST(T, :test)[:]
+data1 = Flux.DataLoader((X_train, y_train), batchsize=100, shuffle=true)
 
 # ╔═╡ 88ac49df-5c4d-4878-8b0e-559d4d48d6f8
 md"""
@@ -375,7 +436,7 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.2"
+julia_version = "1.10.3"
 manifest_format = "2.0"
 project_hash = "3c82ce38a8bf1560cce53faf06d2d63d86636bce"
 
@@ -644,7 +705,7 @@ weakdeps = ["Dates", "LinearAlgebra"]
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.1.0+0"
+version = "1.1.1+0"
 
 [[deps.CompositionsBase]]
 git-tree-sha1 = "802bb88cd69dfd1509f6670416bd4434015693ad"
@@ -2835,13 +2896,11 @@ version = "1.4.1+1"
 # ╟─4fa39e63-cb80-4125-ad7e-80ef1f7cba4f
 # ╟─e1d56012-ddd8-4efe-b6f7-72bd88c7dd1c
 # ╟─649681ae-ca54-4c01-9e9e-d1ca3eb192fe
-# ╠═d1337cc6-ac71-4234-88db-fe01f4686807
 # ╟─4b4b1742-d7e7-4538-b420-9ebd63e8b463
 # ╠═3545dc45-9902-4e51-9b4a-772c7f667e0e
 # ╟─d88b258c-cfcd-416b-b15a-b3f864b04030
 # ╟─eaeeb678-e690-4de1-8a65-84bff36f24ae
 # ╠═33dca609-3238-430f-8dae-0aa6199b01e7
-# ╠═b0f2c5f9-7303-4c81-a244-fe54f00f4d70
 # ╟─3fc9aacf-7475-4f67-b3d1-090f1524271b
 # ╟─3bdf1d99-df8c-4b3c-b12b-aeefabad2e4f
 # ╟─5ec00665-3fe3-4a82-a5f2-45fe86fa0d15
@@ -2853,8 +2912,12 @@ version = "1.4.1+1"
 # ╠═35150b4a-3f1e-4af2-bdd9-2640894a419c
 # ╟─2fff20de-4831-4d34-95de-27f3b4d8ae51
 # ╠═9098ed3e-62bb-4fee-923c-a4969d489be3
+# ╠═243c4c32-c004-4936-adb1-15369b568ea2
+# ╠═f172894f-6ea6-455b-b70e-181bfc82c436
 # ╟─ba9a94e8-40ef-42ad-a941-dce9ad1d2435
 # ╠═8210e8d7-5e9e-4163-bd5a-d3bbf7f03ab0
+# ╠═053b5f9b-6649-4105-a229-d49686e4beae
+# ╠═6fc8b557-509f-42f2-91b8-78b7bb4e85ed
 # ╟─badeffab-386a-4a3b-8c5d-8588ec26df80
 # ╠═8e1991dd-7ee8-4cf8-8370-bf4cb815a0d5
 # ╟─4a3dc8cd-9d21-4a8a-8777-cb043e3ce22f
@@ -2864,7 +2927,8 @@ version = "1.4.1+1"
 # ╟─6b083ebb-f9f3-490b-9bf3-3f11318c54aa
 # ╟─0ce10511-6c28-4e4f-9cb1-35577c1e2cfe
 # ╠═0ffc22b3-9dcd-496a-a694-1ef3675396f4
-# ╟─88ac49df-5c4d-4878-8b0e-559d4d48d6f8
+# ╠═1055c483-b17a-4b9b-b1d1-68e43ac0889d
+# ╠═88ac49df-5c4d-4878-8b0e-559d4d48d6f8
 # ╠═c344393c-76ca-46ed-bd72-bf69719eafb0
 # ╟─2f8a416e-6692-415b-aa5c-69ccedae6244
 # ╠═d20c2f60-6536-4a27-a22f-844f6e9ecd46
