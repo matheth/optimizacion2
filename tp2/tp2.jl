@@ -275,12 +275,6 @@ begin
 	end
 end
 
-# ╔═╡ 6998b09b-31e4-459d-bd77-7b541e888f78
-
-
-# ╔═╡ 2d37c0a8-6a4b-429c-b441-9a76540a6d29
-
-
 # ╔═╡ 2fff20de-4831-4d34-95de-27f3b4d8ae51
 md"""
 !!! note "Ejercicio 8"
@@ -316,17 +310,17 @@ md"""
 
 # ╔═╡ 8210e8d7-5e9e-4163-bd5a-d3bbf7f03ab0
 begin
-	plot(1:epochs, precision_descent, title="Precision", label="Precision", linewidth=3)
-	plot!(1:epochs, precision_adam, title="Precision", label="Precision", linewidth=3)
-	plot!(1:epochs, precision_momentum, title="Precision", label="Precision", linewidth=3)
+	plot(1:epochs, precision_descent, title="Precision", label="Descent", linewidth=3)
+	plot!(1:epochs, precision_adam, title="Precision", label="Adam", linewidth=3)
+	plot!(1:epochs, precision_momentum, title="Precision", label="Momentum", linewidth=3)
 	savefig("e9-precision.png")
 end
 
 # ╔═╡ 053b5f9b-6649-4105-a229-d49686e4beae
 begin
-	plot(1:epochs, perdida_descent, title="Perdida", label="Perdida", linewidth=3)
-	plot!(1:epochs, perdida_adam, title="Perdida", label="Perdida", linewidth=3)
-	plot!(1:epochs, perdida_momentum, title="Perdida", label="Perdida", linewidth=3)
+	plot(1:epochs, perdida_descent, title="Perdida", label="Descent", linewidth=3)
+	plot!(1:epochs, perdida_adam, title="Perdida", label="Adam", linewidth=3)
+	plot!(1:epochs, perdida_momentum, title="Perdida", label="Momentum", linewidth=3)
 	savefig("e9-perdida.png")
 end
 
@@ -338,12 +332,12 @@ md"""
 
 # ╔═╡ 8e1991dd-7ee8-4cf8-8370-bf4cb815a0d5
 begin
-	plot(1:epochs, perdida_descent, title="Perdidas", label="Perdida Descent", linewidth=3)
-	plot!(1:epochs, perdida_descent_test, title="Perdidas", label="Perdida Descent test", linewidth=3)
-	plot!(1:epochs, perdida_adam, title="Perdidas", label="Perdida Adam", linewidth=3)
-	plot!(1:epochs, perdida_adam_test, title="Perdidas", label="Perdida Adam test", linewidth=3)
-	plot!(1:epochs, perdida_momentum, title="Perdidas", label="Perdida Momentum", linewidth=3)
-	plot!(1:epochs, perdida_momentum_test, title="Perdidas", label="Perdida Momentum test", linewidth=3)
+	plot(1:epochs, perdida_descent, title="Perdidas", label="Descent", linewidth=3)
+	plot!(1:epochs, perdida_descent_test, title="Perdidas", label="Descent test", linewidth=3)
+	plot!(1:epochs, perdida_adam, title="Perdidas", label="Adam", linewidth=3)
+	plot!(1:epochs, perdida_adam_test, title="Perdidas", label="Adam test", linewidth=3)
+	plot!(1:epochs, perdida_momentum, title="Perdidas", label="Momentum", linewidth=3)
+	plot!(1:epochs, perdida_momentum_test, title="Perdidas", label="Momentum test", linewidth=3)
 	savefig("e10-perdida-test.png")
 end
 
@@ -433,39 +427,39 @@ end
 
 # ╔═╡ 0f878464-fbfa-4ba0-8ce5-8976b3488aab
 begin
-	plot(1:epochs, precision_descent_conv, title="Precision Conv", label="Precision Conv", linewidth=3)
-	plot!(1:epochs, precision_adam_conv, title="Precision Conv", label="Precision Conv", linewidth=3)
-	plot!(1:epochs, precision_momentum_conv, title="Precision Conv", label="Precision Conv", linewidth=3)
+	plot(1:epochs, precision_descent_conv, title="Precision Conv", label="Conv Descent", linewidth=3)
+	plot!(1:epochs, precision_adam_conv, title="Precision Conv", label="Conv Adam", linewidth=3)
+	plot!(1:epochs, precision_momentum_conv, title="Precision Conv", label="Conv Momentum", linewidth=3)
 	savefig("e13-precision-conv.png")
 end
 
 # ╔═╡ 07194019-eb07-450b-b640-f7ea77b79e15
 begin
-	plot(1:epochs, perdida_descent_conv, title="Perdida Conv", label="Perdida Conv", linewidth=3)
-	plot!(1:epochs, perdida_adam_conv, title="Perdida Conv", label="Perdida Conv", linewidth=3)
-	plot!(1:epochs, perdida_momentum_conv, title="Perdida Conv", label="Perdida Conv", linewidth=3)
+	plot(1:epochs, perdida_descent_conv, title="Perdida Conv", label="Descent Conv", linewidth=3)
+	plot!(1:epochs, perdida_adam_conv, title="Perdida Conv", label="Adam Conv", linewidth=3)
+	plot!(1:epochs, perdida_momentum_conv, title="Perdida Conv", label="Momentum Conv", linewidth=3)
 	savefig("e13-perdida-conv.png")
 end
 
 # ╔═╡ 2d2e98d0-7660-4468-afcf-f99ff33ecaf3
 begin
-	plot(1:epochs, perdida_descent_conv, title="Perdidas Conv", label="Perdida Descent Conv", linewidth=3)
-	plot!(1:epochs, perdida_descent_test_conv, title="Perdidas Conv", label="Perdida Descent test Conv", linewidth=3)
-	plot!(1:epochs, perdida_adam_conv, title="Perdidas Conv", label="Perdida Adam Conv", linewidth=3)
-	plot!(1:epochs, perdida_adam_test_conv, title="Perdidas Conv", label="Perdida Adam test Conv", linewidth=3)
-	plot!(1:epochs, perdida_momentum_conv, title="Perdidas Conv", label="Perdida Momentum Conv", linewidth=3)
-	plot!(1:epochs, perdida_momentum_test_conv, title="Perdidas Conv", label="Perdida Momentum test Conv", linewidth=3)
+	plot(1:epochs, perdida_descent_conv, title="Perdidas Conv", label="Descent Conv", linewidth=3)
+	plot!(1:epochs, perdida_descent_test_conv, title="Perdidas Conv", label="Descent test Conv", linewidth=3)
+	plot!(1:epochs, perdida_adam_conv, title="Perdidas Conv", label="Adam Conv", linewidth=3)
+	plot!(1:epochs, perdida_adam_test_conv, title="Perdidas Conv", label="Adam test Conv", linewidth=3)
+	plot!(1:epochs, perdida_momentum_conv, title="Perdidas Conv", label="Momentum Conv", linewidth=3)
+	plot!(1:epochs, perdida_momentum_test_conv, title="Perdidas Conv", label="Momentum test Conv", linewidth=3)
 	savefig("e13-precision-conv-test.png")
 end
 
 # ╔═╡ 30fd2dcd-7eac-4866-b27d-f241a4abcb90
 begin
-	plot(1:epochs, perdida_descent, title="Perdidas", label="Perdida Descent", linewidth=3)
-	plot!(1:epochs, perdida_descent_conv, title="Perdidas", label="Perdida Descent Conv", linewidth=3)
-	plot!(1:epochs, perdida_adam, title="Perdidas", label="Perdida Adam", linewidth=3)
-	plot!(1:epochs, perdida_adam_conv, title="Perdidas", label="Perdida Adam Conv", linewidth=3)
-	plot!(1:epochs, perdida_momentum, title="Perdidas", label="Perdida Momentum", linewidth=3)
-	plot!(1:epochs, perdida_momentum_conv, title="Perdidas", label="Perdida Momentum Conv", linewidth=3)
+	plot(1:epochs, perdida_descent, title="Perdidas", label="Descent", linewidth=3)
+	plot!(1:epochs, perdida_descent_conv, title="Perdidas", label="Descent Conv", linewidth=3)
+	plot!(1:epochs, perdida_adam, title="Perdidas", label="Adam", linewidth=3)
+	plot!(1:epochs, perdida_adam_conv, title="Perdidas", label="Adam Conv", linewidth=3)
+	plot!(1:epochs, perdida_momentum, title="Perdidas", label="Momentum", linewidth=3)
+	plot!(1:epochs, perdida_momentum_conv, title="Perdidas", label="Momentum Conv", linewidth=3)
 	savefig("e13-perdida-conv-test.png")
 end
 
@@ -2978,8 +2972,6 @@ version = "1.4.1+1"
 # ╠═266a746d-0ec4-458c-ae3b-a861169e5200
 # ╟─a8f7204f-eb72-4dba-8e99-783ec67bd30f
 # ╠═35150b4a-3f1e-4af2-bdd9-2640894a419c
-# ╠═6998b09b-31e4-459d-bd77-7b541e888f78
-# ╠═2d37c0a8-6a4b-429c-b441-9a76540a6d29
 # ╟─2fff20de-4831-4d34-95de-27f3b4d8ae51
 # ╠═9098ed3e-62bb-4fee-923c-a4969d489be3
 # ╠═243c4c32-c004-4936-adb1-15369b568ea2
