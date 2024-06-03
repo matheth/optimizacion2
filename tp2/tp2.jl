@@ -197,13 +197,12 @@ begin
 	    total_values = 0
 	
 	    for (X, y) in data
-	        for i in 1:size(X, 3)
-	            predicted_value = argmax(model(Flux.unsqueeze(X[:,:,i], dims=3)))[1] - 1
-	            if predicted_value == Flux.onecold(y[:,i]) - 1
-	                correct_values += 1
-	            end
-	            total_values += 1
-	        end
+			# Predict all values in the batch at once
+			y_pred = Flux.onecold(model(X))
+			y_true = Flux.onecold(y)
+			
+			correct_values += sum(y_pred .== y_true)
+			total_values += length(y_true)
 	    end
 	
 	    return correct_values / total_values
@@ -232,15 +231,17 @@ begin
 		perdida_test = []
 
 		if modelo == "conv" 
-			model = Chain(
-				Flux.flatten,
-			    Conv((5,5),1=>6,relu),
-			    MaxPool((2,2)),
-			    Flux.flatten,
-			    Dense(1176=>15,relu),
-			    Dense(15=>10,sigmoid),
-			    softmax
-			)
+	        model = Chain(
+	            Conv((5,5), 1=>6, relu),
+	            MaxPool((2,2)),
+	            Conv((5,5), 6=>16, relu),
+	            MaxPool((2,2)),
+	            Flux.flatten,
+	            Dense(256, 120, relu),
+	            Dense(120, 84, relu),
+	            Dense(84, 10, sigmoid),
+	            softmax
+	        )
 		else
 			model = Chain(
 				# x -> Flux.unsqueeze(x, dims=3),
@@ -258,56 +259,26 @@ begin
 		
 		i = 1
 	    for epoch in 1:epochs
-			if modelo == "conv"
-				Flux.train!(loss, Flux.params(model), data, optimizer)
+	        Flux.train!(loss, Flux.params(model), data, optimizer)
+	        
+			train_loss = mean([loss(d[1], d[2]) for d in data])
+	        test_loss = loss(X_test, y_test)	
 				
-				append!(precision, accuracy(model, data))
-				append!(perdida, loss(Flux.unsqueeze(X_train[:,:,1,i], dims=4), y_train[:,i]))
-		        
-				append!(perdida_test, loss(Flux.unsqueeze(X_test[:,:,1,i], dims=4), y_test[:,i]))
-		        
-				@info "Epoch: $epoch, Accuracy: $(accuracy(model, data)), Loss:$(loss(Flux.unsqueeze(X_train[:,:,1,i], dims=4), y_train[:,i]))"
-				i += 1
-			else 
-				Flux.train!(loss, Flux.params(model), data, optimizer)
-				
-				append!(precision, accuracy(model, data))
-				append!(perdida, loss(Flux.unsqueeze(X_train[:,:,i], dims=3), y_train[:,i]))
-		        
-				append!(perdida_test, loss(Flux.unsqueeze(X_test[:,:,i], dims=3), y_test[:,i]))
-		        
-				@info "Epoch: $epoch, Accuracy: $(accuracy(model, data)), Loss:$(loss(Flux.unsqueeze(X_train[:,:,i], dims=3), y_train[:,i]))"
-				i += 1
-			end
-
+	        push!(precision, accuracy(model, data))
+	        push!(perdida, train_loss)
+	        push!(perdida_test, test_loss)
+	
+	        @info "Epoch: $epoch, Accuracy: $(accuracy(model, data)), Train Loss: $train_loss, Test Loss: $test_loss"
 	    end
+		
 		return precision, perdida, perdida_test
 	end
 end
 
 # ╔═╡ 6998b09b-31e4-459d-bd77-7b541e888f78
-X_test[:,:,2]
+
 
 # ╔═╡ 2d37c0a8-6a4b-429c-b441-9a76540a6d29
-Flux.unsqueeze(X_test[:,:,2], dims = 3)
-
-# ╔═╡ 1de8d765-ca58-4b1f-9fa6-5e9d99ecfc6d
-
-
-# ╔═╡ 80df3b25-db76-46b4-9ef4-3988ebe99285
-
-
-# ╔═╡ 6e01119e-e020-4dbd-8e3f-92a48f85c228
-model = Chain(
-	Conv((5,5),1=>6,relu),
-	MaxPool((2,2)),
-	Flux.flatten,
-	Dense(1176=>15,relu),
-	Dense(15=>10,sigmoid),
-	softmax
-)
-
-# ╔═╡ fbd47eb1-f131-4cc7-8da6-f1df1b2c7835
 
 
 # ╔═╡ 2fff20de-4831-4d34-95de-27f3b4d8ae51
@@ -324,17 +295,17 @@ md"""
 # ╔═╡ 9098ed3e-62bb-4fee-923c-a4969d489be3
 begin
 	epochs = 10
-	#precision_descent, perdida_descent, perdida_descent_test = train_model!(X_train, y_train, X_test, y_test, data1, Flux.Descent(0.1), epochs)
+	precision_descent, perdida_descent, perdida_descent_test = train_model!(X_train, y_train, X_test, y_test, data1, Flux.Descent(0.1), epochs)
 end
 
 # ╔═╡ 243c4c32-c004-4936-adb1-15369b568ea2
 begin
-	#precision_adam, perdida_adam, perdida_adam_test = train_model!(X_train, y_train, X_test, y_test, data1, Flux.ADAM(), epochs)
+	precision_adam, perdida_adam, perdida_adam_test = train_model!(X_train, y_train, X_test, y_test, data1, Flux.ADAM(), epochs)
 end
 
 # ╔═╡ f172894f-6ea6-455b-b70e-181bfc82c436
 begin
-	#precision_momentum, perdida_momentum, perdida_momentum_test = train_model!(X_train, y_train, X_test, y_test, data1, Flux.Momentum(), epochs)
+	precision_momentum, perdida_momentum, perdida_momentum_test = train_model!(X_train, y_train, X_test, y_test, data1, Flux.Momentum(), epochs)
 end
 
 # ╔═╡ ba9a94e8-40ef-42ad-a941-dce9ad1d2435
@@ -345,18 +316,18 @@ md"""
 
 # ╔═╡ 8210e8d7-5e9e-4163-bd5a-d3bbf7f03ab0
 begin
-	#plot(1:epochs, precision_descent, title="Precision", label="Precision", linewidth=3)
-	#plot!(1:epochs, precision_adam, title="Precision", label="Precision", linewidth=3)
-	#plot!(1:epochs, precision_momentum, title="Precision", label="Precision", linewidth=3)
-	#savefig("e9-precision.png")
+	plot(1:epochs, precision_descent, title="Precision", label="Precision", linewidth=3)
+	plot!(1:epochs, precision_adam, title="Precision", label="Precision", linewidth=3)
+	plot!(1:epochs, precision_momentum, title="Precision", label="Precision", linewidth=3)
+	savefig("e9-precision.png")
 end
 
 # ╔═╡ 053b5f9b-6649-4105-a229-d49686e4beae
 begin
-	#plot(1:epochs, perdida_descent, title="Perdida", label="Perdida", linewidth=3)
-	#plot!(1:epochs, perdida_adam, title="Perdida", label="Perdida", linewidth=3)
-	#plot!(1:epochs, perdida_momentum, title="Perdida", label="Perdida", linewidth=3)
-	#savefig("e9-perdida.png")
+	plot(1:epochs, perdida_descent, title="Perdida", label="Perdida", linewidth=3)
+	plot!(1:epochs, perdida_adam, title="Perdida", label="Perdida", linewidth=3)
+	plot!(1:epochs, perdida_momentum, title="Perdida", label="Perdida", linewidth=3)
+	savefig("e9-perdida.png")
 end
 
 # ╔═╡ badeffab-386a-4a3b-8c5d-8588ec26df80
@@ -367,13 +338,13 @@ md"""
 
 # ╔═╡ 8e1991dd-7ee8-4cf8-8370-bf4cb815a0d5
 begin
-	#plot(1:epochs, perdida_descent, title="Perdidas", label="Perdida Descent", linewidth=3)
-	#plot!(1:epochs, perdida_descent_test, title="Perdidas", label="Perdida Descent test", linewidth=3)
-	#plot!(1:epochs, perdida_adam, title="Perdidas", label="Perdida Adam", linewidth=3)
-	#plot!(1:epochs, perdida_adam_test, title="Perdidas", label="Perdida Adam test", linewidth=3)
-	#plot!(1:epochs, perdida_momentum, title="Perdidas", label="Perdida Momentum", linewidth=3)
-	#plot!(1:epochs, perdida_momentum_test, title="Perdidas", label="Perdida Momentum test", linewidth=3)
-	#savefig("e10-momentum-perdida-test.png")
+	plot(1:epochs, perdida_descent, title="Perdidas", label="Perdida Descent", linewidth=3)
+	plot!(1:epochs, perdida_descent_test, title="Perdidas", label="Perdida Descent test", linewidth=3)
+	plot!(1:epochs, perdida_adam, title="Perdidas", label="Perdida Adam", linewidth=3)
+	plot!(1:epochs, perdida_adam_test, title="Perdidas", label="Perdida Adam test", linewidth=3)
+	plot!(1:epochs, perdida_momentum, title="Perdidas", label="Perdida Momentum", linewidth=3)
+	plot!(1:epochs, perdida_momentum_test, title="Perdidas", label="Perdida Momentum test", linewidth=3)
+	savefig("e10-perdida-test.png")
 end
 
 # ╔═╡ 4a3dc8cd-9d21-4a8a-8777-cb043e3ce22f
@@ -413,15 +384,9 @@ begin
 	Random.seed!(1234)
 	T = Float32
 	
-	X_train_2 = reshape(X_train, 28, 28, 1, size(X_train)[3])
-	X_test_2 = reshape(X_test, 28, 28, 1, size(X_test)[3])
+	X_train_2 = reshape(X_train, 28, 28, 1, size(X_train)[end])
+	X_test_2 = reshape(X_test, 28, 28, 1, size(X_test)[end])
 end
-
-# ╔═╡ c27695c8-14b7-4aa4-bc04-3e4a3b2dda1b
-Flux.unsqueeze(X_test_2[:,:,1,2], dims = 3)
-
-# ╔═╡ 5cd15321-9f82-4ff9-b6f6-cb30d3b39eec
-model(Flux.unsqueeze(X_test_2[:,:,:,2], dims = 3))
 
 # ╔═╡ 88ac49df-5c4d-4878-8b0e-559d4d48d6f8
 md"""
@@ -471,7 +436,7 @@ begin
 	plot(1:epochs, precision_descent_conv, title="Precision Conv", label="Precision Conv", linewidth=3)
 	plot!(1:epochs, precision_adam_conv, title="Precision Conv", label="Precision Conv", linewidth=3)
 	plot!(1:epochs, precision_momentum_conv, title="Precision Conv", label="Precision Conv", linewidth=3)
-	savefig("e13-precision_conv.png")
+	savefig("e13-precision-conv.png")
 end
 
 # ╔═╡ 07194019-eb07-450b-b640-f7ea77b79e15
@@ -479,7 +444,7 @@ begin
 	plot(1:epochs, perdida_descent_conv, title="Perdida Conv", label="Perdida Conv", linewidth=3)
 	plot!(1:epochs, perdida_adam_conv, title="Perdida Conv", label="Perdida Conv", linewidth=3)
 	plot!(1:epochs, perdida_momentum_conv, title="Perdida Conv", label="Perdida Conv", linewidth=3)
-	savefig("e13-perdida_conv.png")
+	savefig("e13-perdida-conv.png")
 end
 
 # ╔═╡ 2d2e98d0-7660-4468-afcf-f99ff33ecaf3
@@ -490,7 +455,7 @@ begin
 	plot!(1:epochs, perdida_adam_test_conv, title="Perdidas Conv", label="Perdida Adam test Conv", linewidth=3)
 	plot!(1:epochs, perdida_momentum_conv, title="Perdidas Conv", label="Perdida Momentum Conv", linewidth=3)
 	plot!(1:epochs, perdida_momentum_test_conv, title="Perdidas Conv", label="Perdida Momentum test Conv", linewidth=3)
-	savefig("e13-precision_test_conv.png")
+	savefig("e13-precision-conv-test.png")
 end
 
 # ╔═╡ 30fd2dcd-7eac-4866-b27d-f241a4abcb90
@@ -501,7 +466,7 @@ begin
 	plot!(1:epochs, perdida_adam_conv, title="Perdidas", label="Perdida Adam Conv", linewidth=3)
 	plot!(1:epochs, perdida_momentum, title="Perdidas", label="Perdida Momentum", linewidth=3)
 	plot!(1:epochs, perdida_momentum_conv, title="Perdidas", label="Perdida Momentum Conv", linewidth=3)
-	savefig("e10-momentum-perdida-test.png")
+	savefig("e13-perdida-conv-test.png")
 end
 
 # ╔═╡ e04b70d3-1f3f-484c-a906-6ef27644b849
@@ -3015,12 +2980,6 @@ version = "1.4.1+1"
 # ╠═35150b4a-3f1e-4af2-bdd9-2640894a419c
 # ╠═6998b09b-31e4-459d-bd77-7b541e888f78
 # ╠═2d37c0a8-6a4b-429c-b441-9a76540a6d29
-# ╠═c27695c8-14b7-4aa4-bc04-3e4a3b2dda1b
-# ╠═1de8d765-ca58-4b1f-9fa6-5e9d99ecfc6d
-# ╠═80df3b25-db76-46b4-9ef4-3988ebe99285
-# ╠═6e01119e-e020-4dbd-8e3f-92a48f85c228
-# ╠═fbd47eb1-f131-4cc7-8da6-f1df1b2c7835
-# ╠═5cd15321-9f82-4ff9-b6f6-cb30d3b39eec
 # ╟─2fff20de-4831-4d34-95de-27f3b4d8ae51
 # ╠═9098ed3e-62bb-4fee-923c-a4969d489be3
 # ╠═243c4c32-c004-4936-adb1-15369b568ea2
