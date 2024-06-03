@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.42
+# v0.19.40
 
 using Markdown
 using InteractiveUtils
@@ -226,23 +226,21 @@ md"""
 # ╔═╡ 35150b4a-3f1e-4af2-bdd9-2640894a419c
 begin
 	# Función para entrenar el modelo
-	function train_model!(X_train, y_train, X_test, y_test, data, optimizer, epochs; modelo="normal")
+	function train_model!(X_train, y_train, X_test, y_test, data, optimizer, epochs, modelo="normal")
 		precision = []
 		perdida = []
 		perdida_test = []
 
 		if modelo == "conv" 
 			model = Chain(
-				    Conv((5,5),1 => 7, relu),
-				    MaxPool((2,2)),
-				    Conv((5,5), 7 => 14, relu),
-				    MaxPool((2,2)),
-				    Flux.flatten,
-				    Dense(256=>120,relu),
-				    Dense(120=>84, relu),
-				    Dense(84=>10, sigmoid),
-				    softmax
-				)
+				Flux.flatten,
+			    Conv((5,5),1=>6,relu),
+			    MaxPool((2,2)),
+			    Flux.flatten,
+			    Dense(1176=>15,relu),
+			    Dense(15=>10,sigmoid),
+			    softmax
+			)
 		else
 			model = Chain(
 				# x -> Flux.unsqueeze(x, dims=3),
@@ -260,19 +258,57 @@ begin
 		
 		i = 1
 	    for epoch in 1:epochs
-			Flux.train!(loss, Flux.params(model), data, optimizer)
-			
-			append!(precision, accuracy(model, data))
-			append!(perdida, loss(Flux.unsqueeze(X_train[:,:,i], dims=3), y_train[:,i]))
-	        
-			append!(perdida_test, loss(Flux.unsqueeze(X_test[:,:,i], dims=3), y_test[:,i]))
-	        
-			@info "Epoch: $epoch, Accuracy: $(accuracy(model, data)), Loss:$(loss(Flux.unsqueeze(X_train[:,:,i], dims=3), y_train[:,i]))"
-			i += 1
+			if modelo == "conv"
+				Flux.train!(loss, Flux.params(model), data, optimizer)
+				
+				append!(precision, accuracy(model, data))
+				append!(perdida, loss(Flux.unsqueeze(X_train[:,:,1,i], dims=4), y_train[:,i]))
+		        
+				append!(perdida_test, loss(Flux.unsqueeze(X_test[:,:,1,i], dims=4), y_test[:,i]))
+		        
+				@info "Epoch: $epoch, Accuracy: $(accuracy(model, data)), Loss:$(loss(Flux.unsqueeze(X_train[:,:,1,i], dims=4), y_train[:,i]))"
+				i += 1
+			else 
+				Flux.train!(loss, Flux.params(model), data, optimizer)
+				
+				append!(precision, accuracy(model, data))
+				append!(perdida, loss(Flux.unsqueeze(X_train[:,:,i], dims=3), y_train[:,i]))
+		        
+				append!(perdida_test, loss(Flux.unsqueeze(X_test[:,:,i], dims=3), y_test[:,i]))
+		        
+				@info "Epoch: $epoch, Accuracy: $(accuracy(model, data)), Loss:$(loss(Flux.unsqueeze(X_train[:,:,i], dims=3), y_train[:,i]))"
+				i += 1
+			end
+
 	    end
 		return precision, perdida, perdida_test
 	end
 end
+
+# ╔═╡ 6998b09b-31e4-459d-bd77-7b541e888f78
+X_test[:,:,2]
+
+# ╔═╡ 2d37c0a8-6a4b-429c-b441-9a76540a6d29
+Flux.unsqueeze(X_test[:,:,2], dims = 3)
+
+# ╔═╡ 1de8d765-ca58-4b1f-9fa6-5e9d99ecfc6d
+
+
+# ╔═╡ 80df3b25-db76-46b4-9ef4-3988ebe99285
+
+
+# ╔═╡ 6e01119e-e020-4dbd-8e3f-92a48f85c228
+model = Chain(
+	Conv((5,5),1=>6,relu),
+	MaxPool((2,2)),
+	Flux.flatten,
+	Dense(1176=>15,relu),
+	Dense(15=>10,sigmoid),
+	softmax
+)
+
+# ╔═╡ fbd47eb1-f131-4cc7-8da6-f1df1b2c7835
+
 
 # ╔═╡ 2fff20de-4831-4d34-95de-27f3b4d8ae51
 md"""
@@ -288,17 +324,17 @@ md"""
 # ╔═╡ 9098ed3e-62bb-4fee-923c-a4969d489be3
 begin
 	epochs = 10
-	precision_descent, perdida_descent, perdida_descent_test = train_model!(X_train, y_train, X_test, y_test, data1, Flux.Descent(0.1), epochs)
+	#precision_descent, perdida_descent, perdida_descent_test = train_model!(X_train, y_train, X_test, y_test, data1, Flux.Descent(0.1), epochs)
 end
 
 # ╔═╡ 243c4c32-c004-4936-adb1-15369b568ea2
 begin
-	precision_adam, perdida_adam, perdida_adam_test = train_model!(X_train, y_train, X_test, y_test, data1, Flux.ADAM(), epochs)
+	#precision_adam, perdida_adam, perdida_adam_test = train_model!(X_train, y_train, X_test, y_test, data1, Flux.ADAM(), epochs)
 end
 
 # ╔═╡ f172894f-6ea6-455b-b70e-181bfc82c436
 begin
-	precision_momentum, perdida_momentum, perdida_momentum_test = train_model!(X_train, y_train, X_test, y_test, data1, Flux.Momentum(), epochs)
+	#precision_momentum, perdida_momentum, perdida_momentum_test = train_model!(X_train, y_train, X_test, y_test, data1, Flux.Momentum(), epochs)
 end
 
 # ╔═╡ ba9a94e8-40ef-42ad-a941-dce9ad1d2435
@@ -309,16 +345,18 @@ md"""
 
 # ╔═╡ 8210e8d7-5e9e-4163-bd5a-d3bbf7f03ab0
 begin
-	plot(1:epochs, precision_descent, title="Precision", label="Precision", linewidth=3)
-	plot!(1:epochs, precision_adam, title="Precision", label="Precision", linewidth=3)
-	plot!(1:epochs, precision_momentum, title="Precision", label="Precision", linewidth=3)
+	#plot(1:epochs, precision_descent, title="Precision", label="Precision", linewidth=3)
+	#plot!(1:epochs, precision_adam, title="Precision", label="Precision", linewidth=3)
+	#plot!(1:epochs, precision_momentum, title="Precision", label="Precision", linewidth=3)
+	#savefig("e9-precision.png")
 end
 
 # ╔═╡ 053b5f9b-6649-4105-a229-d49686e4beae
 begin
-	plot(1:epochs, perdida_descent, title="Perdida", label="Perdida", linewidth=3)
-	plot!(1:epochs, perdida_adam, title="Perdida", label="Perdida", linewidth=3)
-	plot!(1:epochs, perdida_momentum, title="Perdida", label="Perdida", linewidth=3)
+	#plot(1:epochs, perdida_descent, title="Perdida", label="Perdida", linewidth=3)
+	#plot!(1:epochs, perdida_adam, title="Perdida", label="Perdida", linewidth=3)
+	#plot!(1:epochs, perdida_momentum, title="Perdida", label="Perdida", linewidth=3)
+	#savefig("e9-perdida.png")
 end
 
 # ╔═╡ badeffab-386a-4a3b-8c5d-8588ec26df80
@@ -329,12 +367,13 @@ md"""
 
 # ╔═╡ 8e1991dd-7ee8-4cf8-8370-bf4cb815a0d5
 begin
-	plot(1:epochs, perdida_descent, title="Perdidas", label="Perdida Descent", linewidth=3)
-	plot!(1:epochs, perdida_descent_test, title="Perdidas", label="Perdida Descent test", linewidth=3)
-	plot!(1:epochs, perdida_adam, title="Perdidas", label="Perdida Adam", linewidth=3)
-	plot!(1:epochs, perdida_adam_test, title="Perdidas", label="Perdida Adam test", linewidth=3)
-	plot!(1:epochs, perdida_momentum, title="Perdidas", label="Perdida Momentum", linewidth=3)
-	plot!(1:epochs, perdida_momentum_test, title="Perdidas", label="Perdida Momentum test", linewidth=3)
+	#plot(1:epochs, perdida_descent, title="Perdidas", label="Perdida Descent", linewidth=3)
+	#plot!(1:epochs, perdida_descent_test, title="Perdidas", label="Perdida Descent test", linewidth=3)
+	#plot!(1:epochs, perdida_adam, title="Perdidas", label="Perdida Adam", linewidth=3)
+	#plot!(1:epochs, perdida_adam_test, title="Perdidas", label="Perdida Adam test", linewidth=3)
+	#plot!(1:epochs, perdida_momentum, title="Perdidas", label="Perdida Momentum", linewidth=3)
+	#plot!(1:epochs, perdida_momentum_test, title="Perdidas", label="Perdida Momentum test", linewidth=3)
+	#savefig("e10-momentum-perdida-test.png")
 end
 
 # ╔═╡ 4a3dc8cd-9d21-4a8a-8777-cb043e3ce22f
@@ -344,7 +383,7 @@ md"""
 """
 
 # ╔═╡ 2c284bb5-57be-48f4-a970-3f0600332836
-#responder
+# El mejor optimizador fue Adam. La precision es mas alta y la perdida menor. 
 
 # ╔═╡ 6f1727bb-9e06-44a3-aa81-9b31864baf3b
 md"""
@@ -378,6 +417,12 @@ begin
 	X_test_2 = reshape(X_test, 28, 28, 1, size(X_test)[3])
 end
 
+# ╔═╡ c27695c8-14b7-4aa4-bc04-3e4a3b2dda1b
+Flux.unsqueeze(X_test_2[:,:,1,2], dims = 3)
+
+# ╔═╡ 5cd15321-9f82-4ff9-b6f6-cb30d3b39eec
+model(Flux.unsqueeze(X_test_2[:,:,:,2], dims = 3))
+
 # ╔═╡ 88ac49df-5c4d-4878-8b0e-559d4d48d6f8
 md"""
 !!! note "Ejercicio 12"
@@ -408,17 +453,17 @@ modelo_convolucional = Chain(
 
 # ╔═╡ 3db67203-831f-4324-a513-74777c5dfa7e
 begin
-	precision_descent_conv, perdida_descent_conv, perdida_descent_test_conv = train_model!(X_train_2, y_train, X_test_2, y_test, data2, Flux.Descent(0.1), epochs)
+	precision_descent_conv, perdida_descent_conv, perdida_descent_test_conv = train_model!(X_train_2, y_train, X_test_2, y_test, data2, Flux.Descent(0.1), epochs, "conv")
 end
 
 # ╔═╡ 755a5e5b-19cc-434d-9cb1-814944f94b15
 begin
-	precision_adam_conv, perdida_adam_conv, perdida_adam_test_conv = train_model!(X_train_2, y_train, X_test_2, y_test, data2, Flux.ADAM(), epochs, "Conv")
+	precision_adam_conv, perdida_adam_conv, perdida_adam_test_conv = train_model!(X_train_2, y_train, X_test_2, y_test, data2, Flux.ADAM(), epochs, "conv")
 end
 
 # ╔═╡ 8bad3ed3-a4d6-484c-80df-8bd031d99a49
 begin
-	precision_momentum_conv, perdida_momentum_conv, perdida_momentum_test_conv = train_model!(X_train_2, y_train, X_test_2, y_test, data2, Flux.Momentum(), epochs, "Conv")
+	precision_momentum_conv, perdida_momentum_conv, perdida_momentum_test_conv = train_model!(X_train_2, y_train, X_test_2, y_test, data2, Flux.Momentum(), epochs, "conv")
 end
 
 # ╔═╡ 0f878464-fbfa-4ba0-8ce5-8976b3488aab
@@ -426,6 +471,7 @@ begin
 	plot(1:epochs, precision_descent_conv, title="Precision Conv", label="Precision Conv", linewidth=3)
 	plot!(1:epochs, precision_adam_conv, title="Precision Conv", label="Precision Conv", linewidth=3)
 	plot!(1:epochs, precision_momentum_conv, title="Precision Conv", label="Precision Conv", linewidth=3)
+	savefig("e13-precision_conv.png")
 end
 
 # ╔═╡ 07194019-eb07-450b-b640-f7ea77b79e15
@@ -433,6 +479,7 @@ begin
 	plot(1:epochs, perdida_descent_conv, title="Perdida Conv", label="Perdida Conv", linewidth=3)
 	plot!(1:epochs, perdida_adam_conv, title="Perdida Conv", label="Perdida Conv", linewidth=3)
 	plot!(1:epochs, perdida_momentum_conv, title="Perdida Conv", label="Perdida Conv", linewidth=3)
+	savefig("e13-perdida_conv.png")
 end
 
 # ╔═╡ 2d2e98d0-7660-4468-afcf-f99ff33ecaf3
@@ -443,6 +490,18 @@ begin
 	plot!(1:epochs, perdida_adam_test_conv, title="Perdidas Conv", label="Perdida Adam test Conv", linewidth=3)
 	plot!(1:epochs, perdida_momentum_conv, title="Perdidas Conv", label="Perdida Momentum Conv", linewidth=3)
 	plot!(1:epochs, perdida_momentum_test_conv, title="Perdidas Conv", label="Perdida Momentum test Conv", linewidth=3)
+	savefig("e13-precision_test_conv.png")
+end
+
+# ╔═╡ 30fd2dcd-7eac-4866-b27d-f241a4abcb90
+begin
+	plot(1:epochs, perdida_descent, title="Perdidas", label="Perdida Descent", linewidth=3)
+	plot!(1:epochs, perdida_descent_conv, title="Perdidas", label="Perdida Descent Conv", linewidth=3)
+	plot!(1:epochs, perdida_adam, title="Perdidas", label="Perdida Adam", linewidth=3)
+	plot!(1:epochs, perdida_adam_conv, title="Perdidas", label="Perdida Adam Conv", linewidth=3)
+	plot!(1:epochs, perdida_momentum, title="Perdidas", label="Perdida Momentum", linewidth=3)
+	plot!(1:epochs, perdida_momentum_conv, title="Perdidas", label="Perdida Momentum Conv", linewidth=3)
+	savefig("e10-momentum-perdida-test.png")
 end
 
 # ╔═╡ e04b70d3-1f3f-484c-a906-6ef27644b849
@@ -452,7 +511,7 @@ md"""
 """
 
 # ╔═╡ 0a8d1d0e-f6b3-4ba6-8f0c-9aa98f88a43a
-#completar
+# se puede observar que el modelo con redes convolucionales funciona mejor que el modelo normal usado antes. 
 
 # ╔═╡ 442d3c42-44e3-4525-a215-8526c61083db
 md"""
@@ -480,7 +539,7 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.3"
+julia_version = "1.10.2"
 manifest_format = "2.0"
 project_hash = "3c82ce38a8bf1560cce53faf06d2d63d86636bce"
 
@@ -749,7 +808,7 @@ weakdeps = ["Dates", "LinearAlgebra"]
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.1.1+0"
+version = "1.1.0+0"
 
 [[deps.CompositionsBase]]
 git-tree-sha1 = "802bb88cd69dfd1509f6670416bd4434015693ad"
@@ -2954,6 +3013,14 @@ version = "1.4.1+1"
 # ╠═266a746d-0ec4-458c-ae3b-a861169e5200
 # ╟─a8f7204f-eb72-4dba-8e99-783ec67bd30f
 # ╠═35150b4a-3f1e-4af2-bdd9-2640894a419c
+# ╠═6998b09b-31e4-459d-bd77-7b541e888f78
+# ╠═2d37c0a8-6a4b-429c-b441-9a76540a6d29
+# ╠═c27695c8-14b7-4aa4-bc04-3e4a3b2dda1b
+# ╠═1de8d765-ca58-4b1f-9fa6-5e9d99ecfc6d
+# ╠═80df3b25-db76-46b4-9ef4-3988ebe99285
+# ╠═6e01119e-e020-4dbd-8e3f-92a48f85c228
+# ╠═fbd47eb1-f131-4cc7-8da6-f1df1b2c7835
+# ╠═5cd15321-9f82-4ff9-b6f6-cb30d3b39eec
 # ╟─2fff20de-4831-4d34-95de-27f3b4d8ae51
 # ╠═9098ed3e-62bb-4fee-923c-a4969d489be3
 # ╠═243c4c32-c004-4936-adb1-15369b568ea2
@@ -2980,6 +3047,7 @@ version = "1.4.1+1"
 # ╠═0f878464-fbfa-4ba0-8ce5-8976b3488aab
 # ╠═07194019-eb07-450b-b640-f7ea77b79e15
 # ╠═2d2e98d0-7660-4468-afcf-f99ff33ecaf3
+# ╠═30fd2dcd-7eac-4866-b27d-f241a4abcb90
 # ╟─e04b70d3-1f3f-484c-a906-6ef27644b849
 # ╠═0a8d1d0e-f6b3-4ba6-8f0c-9aa98f88a43a
 # ╟─442d3c42-44e3-4525-a215-8526c61083db
