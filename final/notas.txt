@@ -1,0 +1,5 @@
+Programación evolutiva: es un método heurístico originalmente concebido para optimización de máquinas de finitos estados. En el caso continuo puede verse como un método poblacional en el que en cada iteración los individuos mutan aleatoriamente. Puede leerse en el capítulo 5 del libro de Simon, donde hay también algunas aplicaciones interesantes, tanto continuas como discretas. Se puede complementar con el capítulo 8 del mismo libro, donde se introducen variaciones generales a métodos evolutivos.
+
+
+Simon, D.; Evolutionary optimization algorithms. Whiley. 2013.
+
